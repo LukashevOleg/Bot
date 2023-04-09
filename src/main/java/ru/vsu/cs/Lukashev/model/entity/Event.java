@@ -1,4 +1,4 @@
-package ru.vsu.cs.Lukashev.model;
+package ru.vsu.cs.Lukashev.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

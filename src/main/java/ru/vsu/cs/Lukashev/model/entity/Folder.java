@@ -1,4 +1,4 @@
-package ru.vsu.cs.Lukashev.model;
+package ru.vsu.cs.Lukashev.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,9 +18,16 @@ public class Folder {
     private long id;
 
 
-    @ManyToOne
-    @JoinColumn(name = "owner_id", referencedColumnName = "id")
+//    @ManyToOne()
+//    @JoinColumn(name = "owner_id", referencedColumnName = "User.id")
+//    private long ownerID;
+
+    @Column(name = "ownerID")
     private long ownerID;
+
+    @ManyToOne
+    @JoinColumn(name = "ownerID", referencedColumnName = "id", insertable = false, updatable = false)
+    private User owner;
 
     @Column(name = "name")
     private String name;

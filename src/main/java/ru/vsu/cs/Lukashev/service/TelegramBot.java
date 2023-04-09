@@ -1,5 +1,6 @@
 package ru.vsu.cs.Lukashev.service;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -8,14 +9,19 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.vsu.cs.Lukashev.config.BotConfig;
-import ru.vsu.cs.Lukashev.model.User;
-import ru.vsu.cs.Lukashev.model.UserRepository;
+import ru.vsu.cs.Lukashev.model.entity.User;
+import ru.vsu.cs.Lukashev.model.repository.EventRepository;
+import ru.vsu.cs.Lukashev.model.repository.UserRepository;
 
 @Component
+@Transactional
 public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private EventRepository eventRepository;
+
     private final BotConfig botConfig;
 
     public TelegramBot(BotConfig botConfig) {
@@ -42,11 +48,15 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (messageText){
                 case "/start":
-//                    registerUser(update.getMessage());
+                    registerUser(update.getMessage());
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
+
+                case "/addEvent":
+
+                    break;
                 default:
-                    startCommandReceived(chatId, "Мимо мимо, брат");
+                    defaultAnswer(chatId);
                     break;
             }
 
@@ -54,16 +64,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
+
+    private void defaultAnswer(long chatId){
+        sendMessage(chatId, "Мимо, мимо, брат..");
+    }
     private void registerUser(Message message) {
 
         if(userRepository.findById(message.getChatId()).isEmpty()){
             var chatId = message.getChatId();
             var chat = message.getChat();
-
             User user = new User();
 
             user.setId(chatId);
             user.setName(chat.getFirstName());
+            System.out.println(user);
             userRepository.save(user);
 //            log.info();
         }
