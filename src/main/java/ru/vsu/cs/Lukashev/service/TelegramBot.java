@@ -1,12 +1,12 @@
 package ru.vsu.cs.Lukashev.service;
 
-import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiParser;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -20,16 +20,19 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.vsu.cs.Lukashev.calendarData.DayOfWeekEnum;
 import ru.vsu.cs.Lukashev.calendarData.MonthEnum;
 import ru.vsu.cs.Lukashev.config.BotConfig;
+import ru.vsu.cs.Lukashev.model.entity.Event;
+import ru.vsu.cs.Lukashev.model.entity.Folder;
 import ru.vsu.cs.Lukashev.model.entity.User;
 import ru.vsu.cs.Lukashev.model.repository.EventRepository;
 import ru.vsu.cs.Lukashev.model.repository.UserRepository;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.Integer.*;
 
 @Slf4j
 @Component
@@ -41,6 +44,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static final String CHOOSE_MONTH_BUTTON             = "\\d{1,2}";
     private static final String CHOOSE_DAY_OF_MONTH_BUTTON      = "\\d{1,2}.\\d{1,2}";
     private static final String SAME_MESSAGE_BUTTON             = "GO_TO_MESSAGE_";
+    private static final String YES_ENTER_EVENT_NAME_BUTTON     = "YES_ENTER_EVENT_NAME_BUTTON";
+
+//    private User temporaryUser;
+    private Folder temporaryFolder;
+//    private Perm temporaryUser;
+    private Event temporaryEvent;
+
+
 
     @Autowired
     private UserRepository userRepository;
@@ -85,11 +96,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         var curMessageForEdit = update.getCallbackQuery();
-        if (update.hasMessage() && update.getMessage().hasText()){
+        if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getText().startsWith("/")){
 
             String messageText  = update.getMessage().getText();
             long chatId         = update.getMessage().getChatId();
-
+            System.out.println("Command " + messageText);
             switch (messageText) {
                 case "/start"       -> createStartCommand(update, chatId);
                 case "/add"         -> createAddCommand(chatId);
@@ -97,13 +108,26 @@ public class TelegramBot extends TelegramLongPollingBot {
                 default             -> defaultAnswer(chatId);
             }
             setLastCommand(messageText);
-        }
-        else if (update.hasCallbackQuery()){
+
+        } else if (update.hasMessage() && update.getMessage().hasText()) {
+
+            String messageText  = update.getMessage().getText();
+            long chatId         = update.getMessage().getChatId();
+            System.out.println("Command " + messageText);
+            switch (getLastCommand()) {
+                case YES_ENTER_EVENT_NAME_BUTTON       -> createStartCommand(update, chatId);
+
+                default             -> defaultAnswer(chatId);
+            }
+            setLastCommand(messageText);
+
+
+        } else if (update.hasCallbackQuery()){
             String callbackData = curMessageForEdit.getData();
             long messageId      = curMessageForEdit.getMessage().getMessageId();
             long chatId         = curMessageForEdit.getMessage().getChatId();
-            System.out.println(callbackData);
-            System.out.println(callbackData.matches(CHOOSE_DAY_OF_MONTH_BUTTON));
+            System.out.println("update " + callbackData);
+//            System.out.println(callbackData.matches(CHOOSE_DAY_OF_MONTH_BUTTON));
 
             if(callbackData.equals(ADD_FOLDER_BUTTON)){
 
@@ -124,17 +148,36 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 generateChooseDayOfMonthButton(messageId, chatId, callbackData);
 
-//                generateEventOrFolderButton(messageId, chatId, "пошел нахуй аххаха выбрал он хахаха ты завтра хотя бы блять " +
-//                                                                        "спланируй еблан. Планировать собрался");
                 System.out.println("================================");
                 setLastCommand(callbackData);
 
             } else if (callbackData.matches(CHOOSE_DAY_OF_MONTH_BUTTON)){
-                addEventMessage(messageId, chatId, callbackData);
+
+                generateDoYouWantEnterEventNameButton(messageId, chatId, callbackData, update.getCallbackQuery().getId());
+
+
+//                enterEventName(messageId, chatId, callbackData);
+//
+//
+//                String[] parseDate = callbackData.split("\\.");
+//
+//                Date dateTime = Date.valueOf(LocalDate.of(2023, parseInt(parseDate[1]), parseInt(parseDate[0])));
+//
+//                this.temporaryEvent = new Event();
+//
+//                temporaryEvent.setDate(dateTime);
+//                temporaryEvent.setOwnerID(userRepository.findById(chatId).isPresent() ?
+//                                            userRepository.findById(chatId).get() : null);
+
+//                temporaryEvent.set
+//                addEventMessage(messageId, chatId, callbackData);
 
                 setLastCommand(callbackData);
             }
-            // getLastCommand() так как обращаемся к предидущей команде
+//            else if (callbackData.startsWith()) {
+//
+//            }
+            // getLastCommand() так как обращаемся к предыдущей команде
             else if (callbackData.startsWith(SAME_MESSAGE_BUTTON)) {
                 String[] parts = callbackData.split("_");
 
@@ -148,29 +191,71 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
-    private void createMyCalendarCommand(long chatId) {
 
+    /**
+     * START input text processing
+     */
+
+//    private void addEventName(String eventName){
+//
+//        this.temporaryEvent.setName(eventName);
+//
+//    }
+
+    /**
+     * END input text processing
+     * ---------------------------------
+     * START button processing area
+     */
+    private void generateDoYouWantEnterEventDescriptionButton(){
 
     }
+    private void generateDoYouWantEnterEventNameButton(long messageId, long chatId, String callbackData) {
 
-    private void addEventMessage(long messageId, long chatId, String date){
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId);
         message.setDisableWebPagePreview(true);
-        message.setText("записал " + date);
+        message.setText("Задать название?");
         message.setMessageId((int) messageId);
+        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
+
+        var yesButton = new InlineKeyboardButton();
+        yesButton.setText("Да");
+//        yesButton.setSwitchInlineQueryCurrentChat("/event_name: ");
+        yesButton.setCallbackData("Введи название");
+
+        setLastCommand(YES_ENTER_EVENT_NAME_BUTTON);
+        rowInline.add(yesButton);
+
+
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+
+
+//        SendMessage sendMessage = new SendMessage();
+//        sendMessage.setChatId(chatId);
+//        sendMessage.setText("Введите сообщение:");
+//        sendMessage.setReplyMarkup(new ForceReply());
+//        sendMessage.setReplyMarkup(replyMarkup);
+//        execute(sendMessage);
 
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            log.error("addEventMessage method error: " + e);
+            log.error("Error : " + e);
         }
+
+
+
+
+
+
     }
-
-    /**
-     * START button processing area
-     */
-
     private void generateChooseDayOfMonthButton(long messageId, long chatId, String month){
         System.out.println("I am in generateChooseDayOfMonthButton");
 
@@ -199,7 +284,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
 
 
-        Month curMonth = Month.of(Integer.parseInt(month));
+        Month curMonth = Month.of(parseInt(month));
 
         int firstDayOfMonth = LocalDate.parse(month.matches("\\d") ? ("01.0" + month + ".2023")
                                               : ("01." + month + ".2023"),
@@ -332,7 +417,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
     }
 
+    private void createMyCalendarCommand(long chatId) {
 
+
+    }
 
     private void createAddCommand(long chatId){
 //        message(chatId, "Хотите создать событие или папку?");
