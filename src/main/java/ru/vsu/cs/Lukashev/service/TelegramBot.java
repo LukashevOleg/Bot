@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -32,6 +31,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static java.lang.Integer.*;
@@ -51,11 +51,19 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static final String NO_ENTER_EVENT_NAME_BUTTON          = "NO_ENTER_EVENT_NAME_BUTTON";
     private static final String YES_ENTER_EVENT_DESCRIPTION_BUTTON  = "YES_ENTER_EVENT_DESCRIPTION_BUTTON";
     private static final String NO_ENTER_EVENT_DESCRIPTION_BUTTON   = "NO_ENTER_EVENT_DESCRIPTION_BUTTON";
+    private static final String YES_ADD_EVENT_TO_FOLDER_BUTTON      = "YES_ADD_EVENT_TO_FOLDER_BUTTON";
+    private static final String NO_ADD_EVENT_TO_FOLDER_BUTTON       = "NO_ADD_EVENT_TO_FOLDER_BUTTON";
+    private static final String CHOOSE_EVENT_FOR_FOLDER_BUTTON      = "CHOOSE_EVENT_FOR_FOLDER_BUTTON_";
+    private static final String SWITCH_PAGE_BUTTON                  = "SWITCH_PAGE_BUTTON_";
 
 //    private User temporaryUser;
     private Folder temporaryFolder;
 //    private Perm temporaryUser;
     private Event temporaryEvent;
+
+    private List<Integer> temporaryEventIndexListForAddedToFolder = new ArrayList<>();
+
+    private int currentPageNumber = 0;
 
 
 
@@ -99,6 +107,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.lastCommand = lastCommand;
     }
 
+    public List<Integer> getTemporaryEventIndexListForAddedToFolder() {
+        return temporaryEventIndexListForAddedToFolder;
+    }
+
+    public int getCurrentPageNumber() {
+        return currentPageNumber;
+    }
+
+    public void setCurrentPageNumber(int currentPageNumber) {
+        this.currentPageNumber = currentPageNumber;
+    }
+
     @Override
     public void onUpdateReceived(Update update) {
         var curMessageForEdit = update.getCallbackQuery();
@@ -131,7 +151,14 @@ public class TelegramBot extends TelegramLongPollingBot {
             switch (getLastCommand()) {
                 case ENTER_EVENT_NAME_BUTTON            -> generateDoYouWantEnterEventDescriptionButton(chatId, messageText);
                 case YES_ENTER_EVENT_DESCRIPTION_BUTTON -> eventAdd(chatId, messageText);
-                case ADD_FOLDER_BUTTON                  -> eventAdd(chatId, messageText);
+                case ADD_FOLDER_BUTTON                  -> {
+
+                    this.temporaryFolder = new Folder();
+                    temporaryFolder.setName(messageText);
+                    temporaryFolder.setOwnerID(chatId);
+                    generateDoYouWantAddEventToFolderButton(chatId, messageText);
+
+                }
                 default             -> defaultAnswer(chatId);
             }
             setLastCommand(messageText);
@@ -207,6 +234,20 @@ public class TelegramBot extends TelegramLongPollingBot {
                 eventAdd(chatId, "");
 //                sendMessageEnterSomething(messageId, chatId, "описание");
                 setLastCommand(callbackData);
+            } else if (callbackData.equals(YES_ADD_EVENT_TO_FOLDER_BUTTON)) {
+                generateChooseEventToFolderButton(messageId, chatId);
+                setLastCommand(callbackData);
+            } else if (callbackData.startsWith(CHOOSE_EVENT_FOR_FOLDER_BUTTON)) {
+                String[] split = callbackData.split("_");
+                Integer index = Integer.parseInt(split[5]);
+
+                if(!temporaryEventIndexListForAddedToFolder.contains(index))
+                    temporaryEventIndexListForAddedToFolder.add(index);
+                else
+                    temporaryEventIndexListForAddedToFolder.remove(index);
+
+                generateChooseEventToFolderButton(messageId, chatId);
+
             }
             // getLastCommand() так как обращаемся к предыдущей команде
             else if (callbackData.startsWith(SAME_MESSAGE_BUTTON)) {
@@ -245,6 +286,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
 
+
+    private int iteratorSize(Iterator<Event> eventIterator){
+        int count = 0;
+
+        while (eventIterator.hasNext()){
+            eventIterator.next();
+            count++;
+        }
+        return count;
+    }
+
+
     /**
      * END info message
      * -----------------------------------
@@ -279,7 +332,136 @@ public class TelegramBot extends TelegramLongPollingBot {
      * ---------------------------------
      * START button processing area
      */
+    private void generateChooseEventToFolderButton(long messageId, long chatId){
 
+        int pageNumber = getCurrentPageNumber();
+
+        EditMessageText message = new EditMessageText();
+        message.setText("Выбирайте!");
+        message.setChatId(chatId);
+        message.setMessageId((int) messageId);
+
+        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline;
+        // поменять на поиск всех по ID
+        Iterator<Event> eventIterator = eventRepository.findAll().iterator();
+        var eventIteratorSize = iteratorSize(eventRepository.findAll().iterator());
+
+        String green_check_mark = EmojiParser.parseToUnicode(":white_check_mark:");
+        String red_check_mark = EmojiParser.parseToUnicode(":x:");
+
+
+        int curEventIndex = 0;
+
+        while (eventIterator.hasNext() && curEventIndex < (pageNumber * 10)){
+            eventIterator.next();
+            curEventIndex++;
+        }
+
+        while (eventIterator.hasNext()) {
+            rowInline = new ArrayList<>();
+
+            Event curEvent = eventIterator.next();
+
+            var buttonEventName = new InlineKeyboardButton();
+            buttonEventName.setText(curEvent.getName());
+            buttonEventName.setCallbackData(YES_ADD_EVENT_TO_FOLDER_BUTTON);
+
+            var buttonGreenCheckmark = new InlineKeyboardButton();
+            if (!temporaryEventIndexListForAddedToFolder.contains((int)curEvent.getId()))
+                buttonGreenCheckmark.setText(green_check_mark);
+            else
+                buttonGreenCheckmark.setText(red_check_mark);
+            buttonGreenCheckmark.setCallbackData(CHOOSE_EVENT_FOR_FOLDER_BUTTON + curEvent.getId());
+
+            rowInline.add(buttonEventName);
+            rowInline.add(buttonGreenCheckmark);
+            rowsInline.add(rowInline);
+        }
+
+        var previousPageButton = new InlineKeyboardButton();
+        String arrow_left = EmojiParser.parseToUnicode(":arrow_left:");
+        previousPageButton.setText(arrow_left);
+        if (pageNumber -1 > 0) {
+            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber - 1));
+            setCurrentPageNumber(getCurrentPageNumber() - 1);
+        }
+        else
+            previousPageButton.setCallbackData(YES_ADD_EVENT_TO_FOLDER_BUTTON);
+
+        var infoWhichPageButton = new InlineKeyboardButton();
+        infoWhichPageButton.setText(pageNumber + "/" );
+
+
+
+        var nextPageButton = new InlineKeyboardButton();
+        String arrow_right = EmojiParser.parseToUnicode(":arrow_right:");
+        nextPageButton.setText(arrow_right);
+        //проверяем есть ли другие страницы
+        if (eventIteratorSize / 10 > (pageNumber+1) ) {
+            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber + 1));
+            setCurrentPageNumber(getCurrentPageNumber() + 1);
+        }
+        else
+            nextPageButton.setCallbackData(YES_ADD_EVENT_TO_FOLDER_BUTTON);
+
+
+        markupInline.setKeyboard(rowsInline);
+
+        message.setReplyMarkup(markupInline);
+
+
+
+        System.out.println("generateChooseEventToFolderButton");
+
+
+
+
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+
+        }
+
+    }
+
+    private void generateDoYouWantAddEventToFolderButton(long chatId, String folderName){
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Хотите добавить события в папку?");
+//        message.setMessageId((int) messageId);
+
+        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
+
+        var yesButton = new InlineKeyboardButton();
+        yesButton.setText("Да");
+        yesButton.setCallbackData(YES_ADD_EVENT_TO_FOLDER_BUTTON);
+
+        var noButton = new InlineKeyboardButton();
+        noButton.setText("Нет");
+        noButton.setCallbackData(NO_ADD_EVENT_TO_FOLDER_BUTTON);
+
+
+
+        rowInline.add(yesButton);
+        rowInline.add(noButton);
+//        rowInline.add(addFolderButton);
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error : " + e);
+        }
+    }
     private void generateDoYouWantEnterEventDescriptionButton(long chatId, String eventName){
 
         temporaryEvent.setName(eventName);
