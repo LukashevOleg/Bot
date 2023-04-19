@@ -26,6 +26,8 @@ import ru.vsu.cs.Lukashev.model.entity.User;
 import ru.vsu.cs.Lukashev.model.repository.EventRepository;
 import ru.vsu.cs.Lukashev.model.repository.UserRepository;
 
+import java.sql.Date;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
@@ -39,12 +41,16 @@ import static java.lang.Integer.*;
 @Transactional
 public class TelegramBot extends TelegramLongPollingBot {
 
-    private static final String ADD_FOLDER_BUTTON               = "ADD_FOLDER_BUTTON";
-    private static final String ADD_EVENT_BUTTON                = "ADD_EVENT_BUTTON";
-    private static final String CHOOSE_MONTH_BUTTON             = "\\d{1,2}";
-    private static final String CHOOSE_DAY_OF_MONTH_BUTTON      = "\\d{1,2}.\\d{1,2}";
-    private static final String SAME_MESSAGE_BUTTON             = "GO_TO_MESSAGE_";
-    private static final String YES_ENTER_EVENT_NAME_BUTTON     = "YES_ENTER_EVENT_NAME_BUTTON";
+    private static final String ADD_FOLDER_BUTTON                   = "ADD_FOLDER_BUTTON";
+    private static final String ADD_EVENT_BUTTON                    = "ADD_EVENT_BUTTON";
+    private static final String CHOOSE_MONTH_BUTTON                 = "\\d{1,2}";
+    private static final String CHOOSE_DAY_OF_MONTH_BUTTON          = "\\d{1,2}.\\d{1,2}";
+    private static final String SAME_MESSAGE_BUTTON                 = "GO_TO_MESSAGE_";
+    private static final String YES_ENTER_EVENT_NAME_BUTTON         = "YES_ENTER_EVENT_NAME_BUTTON";
+    private static final String ENTER_EVENT_NAME_BUTTON             = "ENTER_EVENT_NAME_BUTTON";
+    private static final String NO_ENTER_EVENT_NAME_BUTTON          = "NO_ENTER_EVENT_NAME_BUTTON";
+    private static final String YES_ENTER_EVENT_DESCRIPTION_BUTTON  = "YES_ENTER_EVENT_DESCRIPTION_BUTTON";
+    private static final String NO_ENTER_EVENT_DESCRIPTION_BUTTON   = "NO_ENTER_EVENT_DESCRIPTION_BUTTON";
 
 //    private User temporaryUser;
     private Folder temporaryFolder;
@@ -96,6 +102,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         var curMessageForEdit = update.getCallbackQuery();
+        /**
+         * command with "/"
+         */
         if (update.hasMessage() && update.getMessage().hasText() && update.getMessage().getText().startsWith("/")){
 
             String messageText  = update.getMessage().getText();
@@ -109,20 +118,31 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             setLastCommand(messageText);
 
-        } else if (update.hasMessage() && update.getMessage().hasText()) {
+        }
+        /**
+         * command without "/"
+         */
+        else if (update.hasMessage() && update.getMessage().hasText()) {
 
             String messageText  = update.getMessage().getText();
             long chatId         = update.getMessage().getChatId();
-            System.out.println("Command " + messageText);
+            System.out.println("Command without */* " + getLastCommand());
+//            System.out.println("Command without */* " + messageText);
             switch (getLastCommand()) {
-                case YES_ENTER_EVENT_NAME_BUTTON       -> createStartCommand(update, chatId);
-
+                case ENTER_EVENT_NAME_BUTTON            -> generateDoYouWantEnterEventDescriptionButton(chatId, messageText);
+                case YES_ENTER_EVENT_DESCRIPTION_BUTTON -> eventAdd(chatId, messageText);
+                case ADD_FOLDER_BUTTON                  -> eventAdd(chatId, messageText);
                 default             -> defaultAnswer(chatId);
             }
             setLastCommand(messageText);
 
+            System.out.println(temporaryEvent);
 
-        } else if (update.hasCallbackQuery()){
+        }
+        /**
+         * command with CallbackQuery  (update)
+         */
+        else if (update.hasCallbackQuery()){
             String callbackData = curMessageForEdit.getData();
             long messageId      = curMessageForEdit.getMessage().getMessageId();
             long chatId         = curMessageForEdit.getMessage().getChatId();
@@ -130,10 +150,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 //            System.out.println(callbackData.matches(CHOOSE_DAY_OF_MONTH_BUTTON));
 
             if(callbackData.equals(ADD_FOLDER_BUTTON)){
+                sendMessageEnterSomething(messageId, chatId, "название");
 
 
-
-                generateEventOrFolderButton(messageId, chatId, "Нету пока, отдохни, брат");
+//                generateEventOrFolderButton(messageId, chatId, "Нету пока, отдохни, брат");
                 setLastCommand(callbackData);
 
             } else if (callbackData.equals(ADD_EVENT_BUTTON)) {
@@ -153,30 +173,41 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             } else if (callbackData.matches(CHOOSE_DAY_OF_MONTH_BUTTON)){
 
-                generateDoYouWantEnterEventNameButton(messageId, chatId, callbackData, update.getCallbackQuery().getId());
+                sendMessageEnterSomething(messageId, chatId, "название");
+
+//                generateDoYouWantEnterEventNameButton(messageId, chatId, callbackData);
 
 
 //                enterEventName(messageId, chatId, callbackData);
 //
 //
-//                String[] parseDate = callbackData.split("\\.");
+                String[] parseDate = callbackData.split("\\.");
 //
-//                Date dateTime = Date.valueOf(LocalDate.of(2023, parseInt(parseDate[1]), parseInt(parseDate[0])));
+                Date dateTime = Date.valueOf(LocalDate.of(2023, parseInt(parseDate[1]), parseInt(parseDate[0])));
 //
-//                this.temporaryEvent = new Event();
+                this.temporaryEvent = new Event();
 //
-//                temporaryEvent.setDate(dateTime);
-//                temporaryEvent.setOwnerID(userRepository.findById(chatId).isPresent() ?
-//                                            userRepository.findById(chatId).get() : null);
+                temporaryEvent.setDate(dateTime);
+                temporaryEvent.setOwnerID(userRepository.findById(chatId).isPresent() ?
+                                            userRepository.findById(chatId).get() : null);
 
 //                temporaryEvent.set
 //                addEventMessage(messageId, chatId, callbackData);
 
+                setLastCommand(ENTER_EVENT_NAME_BUTTON);
+            }
+//            else if (callbackData.startsWith(ENTER_EVENT_NAME_BUTTON)) {
+//                sendMessageEnterSomething(messageId, chatId, "название");
+//                setLastCommand(ENTER_EVENT_NAME_BUTTON);
+//            }
+            else if (callbackData.equals(YES_ENTER_EVENT_DESCRIPTION_BUTTON)) {
+                sendMessageEnterSomething(messageId, chatId, "описание");
+                setLastCommand(callbackData);
+            }else if (callbackData.equals(NO_ENTER_EVENT_DESCRIPTION_BUTTON)) {
+                eventAdd(chatId, "");
+//                sendMessageEnterSomething(messageId, chatId, "описание");
                 setLastCommand(callbackData);
             }
-//            else if (callbackData.startsWith()) {
-//
-//            }
             // getLastCommand() так как обращаемся к предыдущей команде
             else if (callbackData.startsWith(SAME_MESSAGE_BUTTON)) {
                 String[] parts = callbackData.split("_");
@@ -191,10 +222,51 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
+    /**
+     * START info message
+     */
+
+    private void eventAdd(long chatId, String eventDescription){
+        temporaryEvent.setDescription(eventDescription);
+        eventRepository.save(temporaryEvent);
+//        temporaryEvent = new ;
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM");
+        message.setText("Добавлено событие <b>" + temporaryEvent.getName() + "</b> на дату " +
+                dateFormat.format(temporaryEvent.getDate()) + " . Обращайтесь! :)");
+        message.enableHtml(true);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error : " + e);
+        }
+    }
+
 
     /**
+     * END info message
+     * -----------------------------------
      * START input text processing
      */
+
+
+
+    private void sendMessageEnterSomething(long messageId, long chatId, String text){
+        EditMessageText message = new EditMessageText();
+        message.setChatId(chatId);
+        message.setMessageId((int) messageId);
+        message.setDisableWebPagePreview(true);
+        message.setText("Напишите, пожалуйста, " + text + ".");
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sendMessageEnterEventName: " + e);
+        }
+    }
+
 
 //    private void addEventName(String eventName){
 //
@@ -207,7 +279,42 @@ public class TelegramBot extends TelegramLongPollingBot {
      * ---------------------------------
      * START button processing area
      */
-    private void generateDoYouWantEnterEventDescriptionButton(){
+
+    private void generateDoYouWantEnterEventDescriptionButton(long chatId, String eventName){
+
+        temporaryEvent.setName(eventName);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Хотите добавить описание событию?");
+
+        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
+
+        var yesButton = new InlineKeyboardButton();
+        yesButton.setText("Да");
+        yesButton.setCallbackData(YES_ENTER_EVENT_DESCRIPTION_BUTTON);
+
+        var noButton = new InlineKeyboardButton();
+        noButton.setText("Нет");
+        noButton.setCallbackData(NO_ENTER_EVENT_DESCRIPTION_BUTTON);
+
+
+
+        rowInline.add(yesButton);
+        rowInline.add(noButton);
+//        rowInline.add(addFolderButton);
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error : " + e);
+        }
 
     }
     private void generateDoYouWantEnterEventNameButton(long messageId, long chatId, String callbackData) {
@@ -217,23 +324,30 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setDisableWebPagePreview(true);
         message.setText("Задать название?");
         message.setMessageId((int) messageId);
-        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
-
-        var yesButton = new InlineKeyboardButton();
-        yesButton.setText("Да");
-//        yesButton.setSwitchInlineQueryCurrentChat("/event_name: ");
-        yesButton.setCallbackData("Введи название");
-
-        setLastCommand(YES_ENTER_EVENT_NAME_BUTTON);
-        rowInline.add(yesButton);
 
 
-
-        rowsInline.add(rowInline);
-        markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
+//        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
+//        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+//        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
+//
+//        var yesButton = new InlineKeyboardButton();
+//        yesButton.setText("Да");
+////        yesButton.setSwitchInlineQueryCurrentChat("/event_name: ");
+//        yesButton.setCallbackData(YES_ENTER_EVENT_NAME_BUTTON);
+//
+//        var noButton = new InlineKeyboardButton();
+//        noButton.setText("Нет");
+////        yesButton.setSwitchInlineQueryCurrentChat("/event_name: ");
+//        yesButton.setCallbackData(NO_ENTER_EVENT_NAME_BUTTON);
+////        setLastCommand(YES_ENTER_EVENT_NAME_BUTTON);
+//        rowInline.add(yesButton);
+//        rowInline.add(noButton);
+//
+//
+//
+//        rowsInline.add(rowInline);
+//        markupInline.setKeyboard(rowsInline);
+//        message.setReplyMarkup(markupInline);
 
 
 
