@@ -22,12 +22,14 @@ public class Folder {
 //    @JoinColumn(name = "owner_id", referencedColumnName = "User.id")
 //    private long ownerID;
 
-    @Column(name = "ownerID")
-    private long ownerID;
+//    @Column(name = "ownerID")
+//    private long ownerID;
 
     @ManyToOne
-    @JoinColumn(name = "ownerID", referencedColumnName = "id", insertable = false, updatable = false)
-    private User owner;
+    @JoinColumn(name = "owner_id", referencedColumnName = "id")
+    private User ownerID;
+
+
 
     @Column(name = "name")
     private String name;

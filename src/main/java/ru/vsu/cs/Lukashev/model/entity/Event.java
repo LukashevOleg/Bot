@@ -28,6 +28,7 @@ public class Event {
     @JoinColumn(name = "owner_id", referencedColumnName = "id")
     private User ownerID;
 
+
     @ManyToOne
     @JoinColumn(name = "folder_id", referencedColumnName = "id")
     private Folder folderID;

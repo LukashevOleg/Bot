@@ -20,21 +20,21 @@ public class User {
     @Column(name = "\"name\"")
     private String name;
 
-    @OneToMany
-    @JoinColumn(name = "owner_id")
-    List<Event> events = new ArrayList<>();
+//    @OneToMany
+//    @JoinColumn(name = "owner_id")
+//    List<Event> events = new ArrayList<>();
+//
+//    @OneToMany
+//    @JoinColumn(name = "folder_id")
+//    List<Event> folders = new ArrayList<>();
 
-    @OneToMany
-    @JoinColumn(name = "folder_id")
-    List<Event> folders = new ArrayList<>();
-
-    @OneToMany
-    @JoinColumn(name = "user_id")
-    List<Event> permissionForMyEvents = new ArrayList<>();
-
-    @OneToMany
-    @JoinColumn(name = "child_id")
-    List<Event> permissionForAnotherEvents = new ArrayList<>();
+//    @OneToMany
+//    @JoinColumn(name = "user_id")
+//    List<Event> permissionForMyEvents = new ArrayList<>();
+//
+//    @OneToMany
+//    @JoinColumn(name = "child_id")
+//    List<Event> permissionForAnotherEvents = new ArrayList<>();
 
     @Override
     public String toString() {
