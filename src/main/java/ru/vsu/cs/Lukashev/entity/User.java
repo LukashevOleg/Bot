@@ -1,10 +1,9 @@
-package ru.vsu.cs.Lukashev.model.entity;
+package ru.vsu.cs.Lukashev.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.util.ArrayList;
-import java.util.List;
+
 import java.util.Objects;
 
 @Entity

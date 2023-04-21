@@ -1,7 +1,7 @@
-package ru.vsu.cs.Lukashev.model.repository;
+package ru.vsu.cs.Lukashev.repository;
 
 import org.springframework.data.repository.CrudRepository;
-import ru.vsu.cs.Lukashev.model.entity.Permission;
+import ru.vsu.cs.Lukashev.entity.Permission;
 
 public interface PermissionRepository extends CrudRepository<Permission, Long> {
 
