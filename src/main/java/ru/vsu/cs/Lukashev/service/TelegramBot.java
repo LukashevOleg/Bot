@@ -364,11 +364,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 createMyFoldersCommand(chatId);
 
-
-            } else if (callbackData.startsWith(SAVE_CHANGES_IN_FOLDER_BUTTON)) {
-                saveChangesInFolder();
-                createMyFoldersCommand(chatId);
             }
+
 
         }
         /**
@@ -388,7 +385,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId         = curMessageForEdit.getMessage().getChatId();
             System.out.println("update with */* " + callbackData);
             switch (callbackData){
-                case MY_FOLDERS_COMMAND -> createMyFoldersCommand(chatId);
+                case MY_FOLDERS_COMMAND ->{
+                    saveChangesInFolder();
+                    createMyFoldersCommand(chatId);
+                }
             }
 //            if(callbackData.equals(MY_FOLDERS_COMMAND)){
 //
@@ -840,7 +840,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         EditMessageText message = new EditMessageText();
         String folderName = folderRepository.findById(folderId).get().getName();
-        message.setText("Ваши события в папке <b>" + folderName + "</b>");
+        message.setText("Ваши события \n в папке <b>" + folderName + "</b>");
         message.enableHtml(true);
         message.setChatId(chatId);
         message.setMessageId((int) messageId);
@@ -849,25 +849,27 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline        = new ArrayList<>();
 
-        var goBack = new InlineKeyboardButton();
+        var goBackButton = new InlineKeyboardButton();
         String go_back_mark = EmojiParser.parseToUnicode(":back:");
-        goBack.setText(go_back_mark);
-        goBack.setCallbackData(MY_FOLDERS_COMMAND);
+        goBackButton.setText(go_back_mark);
+        goBackButton.setCallbackData(MY_FOLDERS_COMMAND);
 
-        var save = new InlineKeyboardButton();
-        //кнопка назад должна быть
-        save.setText("сохранить");
-        save.setCallbackData(SAVE_CHANGES_IN_FOLDER_BUTTON);
+        var addEventButton = new InlineKeyboardButton();
+        String add_event_mark = EmojiParser.parseToUnicode(":heavy_plus_sign:");
+        addEventButton.setText(add_event_mark + " событие");
+        addEventButton.setCallbackData(MY_FOLDERS_COMMAND);
 
-        rowInline.add(goBack);
-        rowInline.add(save);
+
+
+        rowInline.add(goBackButton);
+        rowInline.add(addEventButton);
         rowsInline.add(rowInline);
 
         List<Event> eventList = getEventListByFolderId(folderId);
         Iterator<Event> eventIterator = eventList.iterator();
         var eventListSize = eventList.size();
         String delete_event_mark = EmojiParser.parseToUnicode(":x:");
-        String add_event_mark = EmojiParser.parseToUnicode(":radio_button:");
+        add_event_mark = EmojiParser.parseToUnicode(":radio_button:");
 
         int curEventIndex = 0;
 
