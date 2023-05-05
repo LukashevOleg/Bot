@@ -19,6 +19,8 @@ public class User {
     @Column(name = "\"name\"")
     private String name;
 
+    @Column(name = "link")
+    private String link;
 //    @OneToMany
 //    @JoinColumn(name = "owner_id")
 //    List<Event> events = new ArrayList<>();
@@ -33,7 +35,9 @@ public class User {
 //
 //    @OneToMany
 //    @JoinColumn(name = "child_id")
-//    List<Event> permissionForAnotherEvents = new ArrayList<>();
+//    List<Event> permissionForAnotherEvents = new ArrayList<>();4
+
+
 
     @Override
     public String toString() {

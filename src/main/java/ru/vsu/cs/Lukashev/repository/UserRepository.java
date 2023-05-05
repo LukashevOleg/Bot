@@ -5,4 +5,5 @@ import ru.vsu.cs.Lukashev.entity.User;
 
 public interface UserRepository extends CrudRepository<User, Long> {
 
+    User findByLink(String link);
 }

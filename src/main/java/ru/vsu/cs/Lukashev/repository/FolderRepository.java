@@ -10,4 +10,6 @@ public interface FolderRepository extends CrudRepository<Folder, Long> {
 
     List<Folder> findByOwnerID(User user);
 
+    List<Folder> findAllByIdIn(List<Long> folderId);
+
 }

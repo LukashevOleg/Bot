@@ -4,14 +4,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Date;
-
 @Entity
-@Table(name = "Permission")
+@Table(name = "confirmation_of_subscribe")
 @Getter
 @Setter
-public class Permission {
-
+public class ConfirmationOfSubscribe {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -25,12 +22,6 @@ public class Permission {
     @JoinColumn(name = "subscriber_id", referencedColumnName = "id")
     private User subscriberID;
 
-    @ManyToOne
-    @JoinColumn(name = "folder_id", referencedColumnName = "id")
-    private Folder folderID;
-
-
-//    @Column(name = "is_folder")
-//    private boolean isFolder;
-
+    @Column(name = "is_confirm")
+    private boolean isConfirm;
 }
