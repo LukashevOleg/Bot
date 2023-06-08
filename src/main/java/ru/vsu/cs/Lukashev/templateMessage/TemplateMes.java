@@ -16,7 +16,6 @@ import java.util.List;
 @Setter @Getter
 public class TemplateMes {
 
-//    private BlockButtons headButtons;
     private List<BlockButtons> blockButtonsList;
 
     private List<List<InlineKeyboardButton>> bodyButtonsList;
@@ -26,10 +25,10 @@ public class TemplateMes {
     public TemplateMes() {
         this.bodyButtonsList = new ArrayList<>();
         this.blockButtonsList = new ArrayList<>();
-//        this.headButtons = new HeadButtons();
     }
 
     public TemplateMes create(Long chatId, int messageId, String text){
+
         this.editMessage = new EditMessageText();
         editMessage.setChatId(chatId);
         editMessage.setMessageId(messageId);
@@ -38,17 +37,13 @@ public class TemplateMes {
 
         InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-//        Collections.reverse(blockButtonsList);
         Iterator<BlockButtons> blockButtonsIterator = blockButtonsList.iterator();
         if(!bodyButtonsList.isEmpty())
             rowsInline.addAll(blockButtonsIterator.next().generate());
         rowsInline.addAll(bodyButtonsList);
+
         while (blockButtonsIterator.hasNext())
             rowsInline.addAll(blockButtonsIterator.next().generate());
-
-
-//        for(BlockButtons block : blockButtonsList)
-//            rowsInline.addAll(block.generate());
 
         markupInline.setKeyboard(rowsInline);
         editMessage.setReplyMarkup(markupInline);
@@ -84,7 +79,6 @@ public class TemplateMes {
     }
 
     public TemplateMes addBlock(BlockButtons blockButtons){
-//        this.headButtons = (HeadButtons) blockButtons;
         this.blockButtonsList.add(blockButtons);
 
         return this;
@@ -92,11 +86,4 @@ public class TemplateMes {
 
 
 
-    public TemplateMes addSwitchPagesButtons(int pageNumber){
-
-
-
-
-        return this;
-    }
 }

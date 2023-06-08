@@ -234,7 +234,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         commandList.add(new BotCommand(MY_CALENDAR_COMMAND,  "Посмотри свои ближайшие события"));
         commandList.add(new BotCommand(MY_FOLDERS_COMMAND,   "Посмотри свои папки"));
         commandList.add(new BotCommand(PERMISSIONS_COMMAND,  "Посмотри свои подписки/наблюдателей"));
-        commandList.add(new BotCommand(SETTINGS_COMMAND,     "Настройки"));
+//        commandList.add(new BotCommand(SETTINGS_COMMAND,     "Настройки"));
         try {
             this.execute(new SetMyCommands(commandList, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -345,12 +345,12 @@ public class TelegramBot extends TelegramLongPollingBot {
                         conf.setSubscriberID(subscriber);
                         conf.setConfirm(false);
                         confirmationOfSubscribeRepository.save(conf);
-                        if (!generateDoYouWantSubscribe(subscriber.getId(), owner.getLink())){
+                        if (subscriber == null || !generateDoYouWantSubscribe(subscriber.getId(), owner.getLink())){
 //                            System.out.println("добавил");
                             sendMessage(chatId, "Пользователь с таким ником не зарегистрирован у нашего бота!");
                         }
                     } else if (!conf.isConfirm()) {
-                        if (!generateDoYouWantSubscribe(subscriber.getId(), owner.getLink())){
+                        if (subscriber == null || !generateDoYouWantSubscribe(subscriber.getId(), owner.getLink())){
 //                            System.out.println("добавил");
                             sendMessage(chatId, "Пользователь с таким ником не зарегистрирован у нашего бота!");
                         }
@@ -897,7 +897,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
     }
-    private void deleteFolder(long folderId){
+
+    @Transactional
+    public void deleteFolder(long folderId){
         Folder folder = folderRepository.findById(folderId).get();
         List<Event> eventList = eventRepository.findByFolderID(folder);
 
@@ -905,7 +907,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.setFolderID(null);
             eventRepository.save(e);
         }
-
+        List<Permission> permissionList = permissionRepository.findAllByFolderID(folder);
+        for(Permission perm : permissionList){
+            permissionRepository.delete(perm);
+        }
         folderRepository.deleteById(folderId);
 
 
@@ -1032,112 +1037,6 @@ public class TelegramBot extends TelegramLongPollingBot {
      * ---------------------------------
      * START button processing area
      */
-//    private void generateSubscribersByFolderButton(long messageId, long chatId){
-//        int pageNumber = getCurrentPage(chatId);
-//
-//        EditMessageText message = new EditMessageText();
-//        String textForMes = "Ваши папки, к которым есть доступ";
-//
-//        message.setText(textForMes);
-//
-//        message.enableHtml(true);
-//        message.setChatId(chatId);
-//        message.setMessageId((int) messageId);
-//
-//        InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
-//        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-//        List<InlineKeyboardButton> rowInline        = new ArrayList<>();
-//
-//        var addPersonButton = new InlineKeyboardButton();
-//        String add_person_mark = EmojiParser.parseToUnicode(":heavy_plus_sign:");
-//        addPersonButton.setText(add_person_mark + " папку");
-//        addPersonButton.setCallbackData(ADD_FOLDER_FOR_BUTTON);
-//
-//        rowInline.add(addPersonButton);
-//        rowsInline.add(rowInline);
-//
-//        List<String> subscribersLinkList = getSubscribersIdByOwnerId(chatId);
-//        Iterator<String> linkListIterator = subscribersLinkList.iterator();
-//        var subscribersLinkListSize = subscribersLinkList.size();
-//        String delete_event_mark = EmojiParser.parseToUnicode(":x:");
-//
-//        int curEventIndex = 0;
-//
-//        while (linkListIterator.hasNext() && curEventIndex < (pageNumber * 10)){
-//            linkListIterator.next();
-//            curEventIndex++;
-//        }
-//
-//        // задаю количество на странице
-//        int uppLimitLinkUserIndex = curEventIndex + 10;
-//
-//        while (linkListIterator.hasNext() && curEventIndex < uppLimitLinkUserIndex) {
-//            rowInline = new ArrayList<>();
-//
-//            String curSubLink = linkListIterator.next();
-//
-//            var linkSubButton = new InlineKeyboardButton();
-//            linkSubButton.setText(curSubLink);
-//            linkSubButton.setCallbackData(CHECK_FOLDERS_FOR_SUBSCRIBER_BUTTON + curSubLink);
-//
-//            var addFolderForSubButton = new InlineKeyboardButton();
-//            addFolderForSubButton.setText("Добавить папку");
-////            addFolderForSubButton.setCallbackData("добавляем папку сабу");
-//            addFolderForSubButton.setCallbackData(ADD_FOLDER_FOR_SUBSCRIBER_BUTTON + curSubLink);
-//
-//            var unsubscribeButton = new InlineKeyboardButton();
-//            unsubscribeButton.setText("Отписать");
-////            unsubscribeButton.setCallbackData("Отписываем чела");
-//            unsubscribeButton.setCallbackData(DELETE_SUBSCRIBER_BUTTON + curSubLink);
-//
-//            rowInline.add(linkSubButton);
-//            rowInline.add(addFolderForSubButton);
-//            rowInline.add(unsubscribeButton);
-//            rowsInline.add(rowInline);
-//            curEventIndex++;
-//        }
-//
-//        var previousPageButton = new InlineKeyboardButton();
-//        String arrow_left = EmojiParser.parseToUnicode(":arrow_left:");
-//        previousPageButton.setText(arrow_left);
-//
-//        if (pageNumber - 1 >= 0)
-//            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHECK_SUBSCRIBERS_BY_FOLDERS + (pageNumber - 1));
-//        else
-//            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHECK_SUBSCRIBERS_BY_FOLDERS + pageNumber);
-//
-//        var infoWhichPageButton = new InlineKeyboardButton();
-//        infoWhichPageButton.setText((pageNumber + 1) + "/" +
-//                ((subscribersLinkListSize / 10) + ((subscribersLinkListSize % 10 == 0 && subscribersLinkListSize > 10)
-//                        ? 0 : 1)));
-//        infoWhichPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHECK_SUBSCRIBERS_BY_FOLDERS + pageNumber);
-//
-//        var nextPageButton = new InlineKeyboardButton();
-//        String arrow_right = EmojiParser.parseToUnicode(":arrow_right:");
-//        nextPageButton.setText(arrow_right);
-//        //проверяем есть ли другие страницы
-//        if ((double)subscribersLinkListSize / 10 > (pageNumber+1) )
-//            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + IN_CHECK_SUBSCRIBERS_BY_FOLDERS + (pageNumber + 1));
-//        else
-//            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHECK_SUBSCRIBERS_BY_FOLDERS + pageNumber);
-//
-//        rowInline = new ArrayList<>();
-//        rowInline.add(previousPageButton);
-//        rowInline.add(infoWhichPageButton);
-//        rowInline.add(nextPageButton);
-//        rowsInline.add(rowInline);
-//
-//        markupInline.setKeyboard(rowsInline);
-//
-//        message.setReplyMarkup(markupInline);
-//
-//        try {
-//            execute(message);
-//        } catch (TelegramApiException e) {
-//
-//        }
-//
-//    }
     private void generateChooseEventToFolderButton(long messageId, long chatId, long folderId){
 
         int pageNumber = getCurrentPage(chatId);
@@ -1160,7 +1059,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<Event> eventList = getEventListByUserId(chatId);
         Iterator<Event> eventIterator = eventList.iterator();
-        var eventIteratorSize = iteratorSize(eventRepository.findById(chatId).stream().iterator());
+        var eventIteratorSize = eventList.size();
         String gray_check_mark = EmojiParser.parseToUnicode(":radio_button:");
         String green_check_mark = EmojiParser.parseToUnicode(":white_check_mark:");
 
@@ -1201,23 +1100,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         previousPageButton.setText(arrow_left);
 
         if (pageNumber - 1 >= 0)
-            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + (pageNumber - 1));
+            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber - 1));
         else
-            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         var infoWhichPageButton = new InlineKeyboardButton();
         infoWhichPageButton.setText((pageNumber + 1) + "/" +
                 ((eventIteratorSize / 10) + ((eventIteratorSize % 10 == 0 && eventIteratorSize > 10) ? 0 : 1)));
-        infoWhichPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+        infoWhichPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         var nextPageButton = new InlineKeyboardButton();
         String arrow_right = EmojiParser.parseToUnicode(":arrow_right:");
         nextPageButton.setText(arrow_right);
         //проверяем есть ли другие страницы
         if ((double)eventIteratorSize / 10 > (pageNumber+1) )
-            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + IN_CHOOSE_EVENT_FOR_FOLDER + (pageNumber + 1));
+            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber + 1));
         else
-            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         rowInline = new ArrayList<>();
         rowInline.add(previousPageButton);
@@ -1257,7 +1156,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<Event> eventList = getEventListByUserId(chatId);
         Iterator<Event> eventIterator = eventList.iterator();
-        var eventIteratorSize = iteratorSize(eventRepository.findById(chatId).stream().iterator());
+        var eventIteratorSize = eventList.size();
         String gray_check_mark = EmojiParser.parseToUnicode(":radio_button:");
         String green_check_mark = EmojiParser.parseToUnicode(":white_check_mark:");
 
@@ -1298,23 +1197,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         previousPageButton.setText(arrow_left);
 
         if (pageNumber - 1 >= 0)
-            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + (pageNumber - 1));
+            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber - 1));
         else
-            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+            previousPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         var infoWhichPageButton = new InlineKeyboardButton();
         infoWhichPageButton.setText((pageNumber + 1) + "/" +
                 ((eventIteratorSize / 10) + ((eventIteratorSize % 10 == 0 && eventIteratorSize > 10) ? 0 : 1)));
-        infoWhichPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+        infoWhichPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         var nextPageButton = new InlineKeyboardButton();
         String arrow_right = EmojiParser.parseToUnicode(":arrow_right:");
         nextPageButton.setText(arrow_right);
         //проверяем есть ли другие страницы
         if ((double)eventIteratorSize / 10 > (pageNumber+1) )
-            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + IN_CHOOSE_EVENT_FOR_FOLDER + (pageNumber + 1));
+            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + (pageNumber + 1));
         else
-            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON+ IN_CHOOSE_EVENT_FOR_FOLDER + pageNumber);
+            nextPageButton.setCallbackData(SWITCH_PAGE_BUTTON + pageNumber);
 
         rowInline = new ArrayList<>();
         rowInline.add(previousPageButton);
@@ -1876,7 +1775,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Что хочешь");
+        message.setText("Что хочешь посмотреть?");
 
         InlineKeyboardMarkup markupInline           = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -1913,13 +1812,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         BlockButtons headBlockButtons = new BlockButtons();
         headBlockButtons
                 .add(new LineButtons(
-                        new ArrayList<>(Arrays.asList("По никам", "По папкам")),
-                        new ArrayList<>(Arrays.asList(  CHECK_SUBSCRIPTIONS_BY_LINKS_BUTTON,
-                                                        CHECK_SUBSCRIPTIONS_BY_FOLDERS_BUTTON ))))
+                        new ArrayList<>(List.of("По папкам")),
+                        new ArrayList<>(List.of(CHECK_SUBSCRIPTIONS_BY_FOLDERS_BUTTON))))
                 .generate();
         templateMessage
                 .addBlock(headBlockButtons)
-                .create(chatId, (int) messageId, "Как хочешь");
+                .create(chatId, (int) messageId, "По какому параметру фильтровать");
 
         System.out.println("dddd");
 
@@ -2521,7 +2419,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         templateMes
                 .addBlock(bodyBlock)
                 .addBlock(underBlock)
-                .create(chatId, "Все ваши события начиная с ближайшего!");
+                .create(chatId, "Все ваши события!");
 
         executeSendMessage(templateMes, "Error:");
 

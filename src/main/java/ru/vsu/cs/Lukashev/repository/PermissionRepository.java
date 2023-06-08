@@ -14,5 +14,6 @@ public interface PermissionRepository extends CrudRepository<Permission, Long> {
     List<Permission> findBySubscriberID(User subscriberID);
     Permission findBySubscriberIDAndFolderID(User subscriberID, Folder folderId);
     List<Permission> findAllByFolderIDIn(List<Folder> folderList);
+    List<Permission> findAllByFolderID(Folder folderId);
 
 }
